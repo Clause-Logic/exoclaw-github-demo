@@ -1,0 +1,63 @@
+# Drop this file into .github/workflows/exoclaw.yml in your repo.
+#
+# No secrets required — uses GitHub Models (gpt-4.1-mini) via GITHUB_TOKEN by default.
+# To use Anthropic or OpenAI instead, add the API key as a repo secret and set model below.
+#
+# Optional: create .bot/soul.md in your repo to give the bot a personality.
+
+name: exoclaw
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened]
+  pull_request_review_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Message to send to the agent"
+        required: true
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    # Only run for contributors — prevents strangers from triggering the bot.
+    # Adjust the list to taste: OWNER, MEMBER, COLLABORATOR, CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.comment.author_association) ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.issue.author_association) ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.pull_request.author_association)
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run exoclaw
+        uses: Clause-Logic/exoclaw-github@main
+        with:
+          # Default: github/gpt-4.1-mini via GITHUB_TOKEN — no secrets needed.
+          # model: claude-sonnet-4-5   # uncomment + add ANTHROPIC_API_KEY secret to use Anthropic
+          # model: gpt-4o              # uncomment + add OPENAI_API_KEY secret to use OpenAI
+          trigger: "@exoclaw"
+          # respond_to_prs_opened: "true"
+          tools: >-
+            github_pr_diff,
+            github_file,
+            github_checks,
+            github_search,
+            github_review,
+            github_label,
+            github_reaction
+          # github_issue — uncomment to allow the bot to create/close issues
+        env:
+          # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
